@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="description" content="">
-    <title>Users in Geofence</title>
+    <title>Users in Geofence and Eco Driving Reports</title>
     <link href="./ThirdPartyLibs/Relation/relationship.css" rel="stylesheet">
     <style>
         div.absolute {
@@ -17,19 +17,36 @@
             margin-left: 10px;
             margin-bottom: 10px;
         }
+
+        .visualization {
+            border: 2px solid #000;
+            padding: 10px;
+            margin-bottom: 20px;
+            width: fit-content;
+        }
+
+        .barchart-container {
+            width: 600px;
+            height: 400px;
+        }
     </style>
 </head>
 
 <body>
     <div class="container">
-        <div class="showcase absolute">
-            <canvas height="600" width="600" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></canvas>
+        <div class="visualization">
+            <div class="showcase absolute">
+                <canvas id="geofenceCanvas" height="600" width="600" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></canvas>
+            </div>
+        </div>
+        <div class="barchart-container">
+            <svg id="barchart" width="600" height="400"></svg>
         </div>
         <script src="./ThirdPartyLibs/D3/d3.min.js"></script>
         <script src="./ThirdPartyLibs/Relation/relation.js"></script>
         <script>
-            var load = function () {
-                // CSV data as a string
+            var loadGeofenceVisualization = function () {
+                // CSV data as a string for users
                 var csvData = `name
 user1
 user2
@@ -47,7 +64,7 @@ user3`;
                 if (!users || !geofence)
                     return;
 
-                var canvas = document.querySelector("canvas"),
+                var canvas = document.querySelector("#geofenceCanvas"),
                     width = 600,
                     height = 600;
 
@@ -78,7 +95,55 @@ user3`;
                 s.setNodes(o), s.setLinks(i), s.setCanvas(canvas), s.setSize(width, height), s.setRadius(12), s.setLinkLength(90), s.setCharge(-60), s.init(), s.run()
             };
 
-            load();
+            var loadEcoDrivingReports = function () {
+                // CSV data as a string for eco-driving reports
+                var ecoCsvData = `vehicle,score
+Vehicle1,75
+Vehicle2,85
+Vehicle3,65
+Vehicle4,90
+Vehicle5,80`;
+
+                // Parse the CSV data
+                var ecoData = d3.csvParse(ecoCsvData);
+
+                // Set up the SVG and scales
+                var svg = d3.select("#barchart"),
+                    margin = { top: 20, right: 30, bottom: 40, left: 40 },
+                    width = +svg.attr("width") - margin.left - margin.right,
+                    height = +svg.attr("height") - margin.top - margin.bottom,
+                    g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+                var x = d3.scaleBand().rangeRound([0, width]).padding(0.1),
+                    y = d3.scaleLinear().rangeRound([height, 0]);
+
+                x.domain(ecoData.map(function (d) { return d.vehicle; }));
+                y.domain([0, d3.max(ecoData, function (d) { return +d.score; })]);
+
+                // Add the x-axis
+                g.append("g")
+                    .attr("class", "axis axis--x")
+                    .attr("transform", "translate(0," + height + ")")
+                    .call(d3.axisBottom(x));
+
+                // Add the y-axis
+                g.append("g")
+                    .attr("class", "axis axis--y")
+                    .call(d3.axisLeft(y).ticks(10, "%"));
+
+                // Add the bars
+                g.selectAll(".bar")
+                    .data(ecoData)
+                    .enter().append("rect")
+                    .attr("class", "bar")
+                    .attr("x", function (d) { return x(d.vehicle); })
+                    .attr("y", function (d) { return y(d.score); })
+                    .attr("width", x.bandwidth())
+                    .attr("height", function (d) { return height - y(d.score); });
+            };
+
+            loadGeofenceVisualization();
+            loadEcoDrivingReports();
         </script>
     </div>
 </body>
